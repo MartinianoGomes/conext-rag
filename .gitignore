@@ -1,4 +1,10 @@
 venv
+.venv
+
+venv-ragas
+.venv-ragas
+
 .env
 .vscode
 .idea
+__pycache__
