@@ -1,4 +1,4 @@
-from langchain_ollama import ChatOllama
+# from langchain_ollama import ChatOllama
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -22,8 +22,8 @@ def build_vectorstore(text: str):
     return vectorstore
 
 
-def create_llm(model_name="llama3"):
-    return ChatOllama(model=model_name)
+# def create_llm(model_name="llama3"):
+#     return ChatOllama(model=model_name)
 
 
 def generate_questions(llm, context, n_questions=3):

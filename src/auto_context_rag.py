@@ -1,15 +1,28 @@
 import sys
+import os
+import dotenv
 from pathlib import Path
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
-
+from langchain.chat_models import init_chat_model
+from transformers import logging
 from rag_pipeline import (
     build_vectorstore,
-    create_llm,
+    # create_llm,
     generate_questions,
     answer_question
 )
 from export_eval_data import save_eval_data
 
+logging.set_verbosity_error()
+
+dotenv.load_dotenv()
+
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+os.environ["OPENAI_BASE_URL"] = os.getenv("OPEN_API_URL", "https://inference.do-ai.run/v1")
+os.environ["HUGGINGFACEAPI_TOKEN"] = os.getenv("HUGGINGFACE_API_TOKEN")
+os.environ["LANGCHAIN_TRACING_V2"] = os.getenv("LANGCHAIN_TRACING_V2", "true")
+os.environ["LANGCHAIN_API_KEY"] = os.getenv("LANGCHAIN_API_KEY")
+os.environ["LANGCHAIN_PROJECT"] = os.getenv("LANGCHAIN_PROJECT", "rag-sael")
 
 def load_document(path: str):
     file_path = Path(path)
@@ -26,25 +39,23 @@ def load_document(path: str):
 
 
 def run(document_path: str):
-    print("📄 Carregando documento...")
-    text = load_document(document_path)
+    document = load_document(document_path)
 
-    print("🔎 Construindo vetor...")
-    vectorstore = build_vectorstore(text)
+    vectorstore = build_vectorstore(document)
     retriever = vectorstore.as_retriever()
 
-    print("🤖 Inicializando LLM...")
-    llm = create_llm("llama3")
+    model = init_chat_model(
+        model=os.getenv("OPEN_MODEL", "openai-gpt-oss-120b"),
+        model_provider="openai",
+        base_url=os.getenv("OPEN_API_URL", "https://inference.do-ai.run/v1")
+    )
 
-    print("🧠 Gerando perguntas automaticamente...")
-    questions = generate_questions(llm, text, n_questions=3)
-
-    print(f"✔️ {len(questions)} perguntas geradas.")
+    questions = generate_questions(model, document, n_questions=3)
 
     qa_pairs = []
 
     for question in questions:
-        answer, docs = answer_question(llm, retriever, question)
+        answer, docs = answer_question(model, retriever, question)
 
         qa_pairs.append({
             "question": question,
@@ -53,10 +64,7 @@ def run(document_path: str):
             "ground_truth": answer
         })
 
-    print("💾 Salvando dados para avaliação...")
     save_eval_data(qa_pairs)
-
-    print("✅ Pipeline concluído.")
 
 
 if __name__ == "__main__":
